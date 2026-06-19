@@ -26,26 +26,6 @@ import {
   FileText
 } from "lucide-react";
 
-// Preloaded list of major countries to ensure suggestions work immediately
-const POPULAR_COUNTRIES = [
-  "India",
-  "United States",
-  "United Kingdom",
-  "Canada",
-  "Australia",
-  "Germany",
-  "Japan",
-  "France",
-  "Singapore",
-  "South Africa",
-  "United Arab Emirates",
-  "Brazil",
-  "Mexico",
-  "New Zealand",
-  "Switzerland",
-  "Saudi Arabia"
-];
-
 // Types
 type UserProfile = {
   age?: number;
@@ -193,7 +173,7 @@ function Markdown({ text }: { text: string }) {
 
 export default function Home() {
   const [country, setCountry] = useState("");
-  const [countries, setCountries] = useState<string[]>(POPULAR_COUNTRIES);
+  const [countries, setCountries] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -207,8 +187,7 @@ export default function Home() {
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   
-  // Client-side mock mode activation
-  const [isMock, setIsMock] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Tab control for workspace in smaller viewports
   const [activeTab, setActiveTab] = useState<"details" | "chat">("details");
@@ -224,16 +203,8 @@ export default function Home() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, chatLoading]);
 
-  // Load URL query params & data on mount
+  // Load data on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("mock") === "true") {
-        setIsMock(true);
-        console.log("Mock mode enabled via URL query parameter.");
-      }
-    }
-
     const savedProfile = localStorage.getItem("careerProfile");
     if (savedProfile) {
       const parsed = JSON.parse(savedProfile);
@@ -250,12 +221,10 @@ export default function Home() {
       try {
         const snapshot = await getDocs(collection(db, "countries"));
         const dbList = snapshot.docs.map(doc => doc.data().name || doc.id);
-        // Combine DB countries with preloaded popular countries to avoid empty dropdown lists
-        const combined = Array.from(new Set([...dbList, ...POPULAR_COUNTRIES]));
-        setCountries(combined);
+        setCountries(dbList);
       } catch (err) {
-        console.error("Error loading countries from DB, using fallback list:", err);
-        setCountries(POPULAR_COUNTRIES);
+        console.error("Error loading countries from DB:", err);
+        setCountries([]);
       }
     }
     loadCountries();
@@ -336,81 +305,9 @@ export default function Home() {
     }
   }
 
-  // High-fidelity fallback mocks when backend fails
-  async function loadMockExams(selectedCountry: string) {
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay
-    
-    if (selectedCountry.toLowerCase() === "india") {
-      setExams([
-        { id: "ssc-cgl", name: "SSC CGL (Combined Graduate Level Exam)", detailsLoaded: false },
-        { id: "upsc-civil", name: "UPSC Civil Services Examination", detailsLoaded: false },
-        { id: "rrb-ntpc", name: "RRB NTPC (Railway Recruitment)", detailsLoaded: false },
-        { id: "ibps-po", name: "IBPS PO (Bank Probationary Officer)", detailsLoaded: false },
-        { id: "nda", name: "NDA Entrance (National Defence Academy)", detailsLoaded: false }
-      ]);
-    } else {
-      setExams([
-        { id: "fed-civil", name: `${selectedCountry} Federal Civil Service Examination`, detailsLoaded: false },
-        { id: "admin-select", name: `${selectedCountry} Administrative Selection`, detailsLoaded: false },
-        { id: "mil-officer", name: `${selectedCountry} Defence Commission`, detailsLoaded: false }
-      ]);
-    }
-  }
-
-  async function loadMockExamDetails(examId: string, examName: string, selectedCountry: string): Promise<Partial<Exam>> {
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-    
-    if (examId === "upsc-civil") {
-      return {
-        description: "The Civil Services Examination is a national competitive examination in India conducted by the Union Public Service Commission for recruitment to various civil services of the government.",
-        minAge: 21,
-        maxAge: 32,
-        education: "Bachelor's Degree in any discipline",
-        nationality: "Citizen of India",
-        experience: "None required (Freshers eligible)",
-        physicalRequirements: "Standard medical fitness checkups",
-        attemptsAllowed: "6 attempts for General Category, 9 for OBC, unlimited for SC/ST",
-        categoryRelaxation: "Up to 5 years for SC/ST, 3 years for OBC",
-        officialUrl: "https://upsc.gov.in"
-      };
-    } else if (examId === "ssc-cgl") {
-      return {
-        description: "Combined Graduate Level Exam (SSC CGL) is conducted for recruitment to Group B and C posts in various ministries, departments and organisations of the Government of India.",
-        minAge: 18,
-        maxAge: 32,
-        education: "Graduate Degree from a recognized university",
-        nationality: "Citizen of India or Nepal/Bhutan",
-        experience: "No prior experience required",
-        physicalRequirements: "Physical measurement and endurance tests apply for Sub-Inspector and Excise Inspector posts",
-        attemptsAllowed: "Unlimited attempts within the age window",
-        categoryRelaxation: "3 years for OBC, 5 years for SC/ST, 10 years for PwD",
-        officialUrl: "https://ssc.gov.in"
-      };
-    } else {
-      return {
-        description: `Official competitive entry examination for recruitment into public sector admin, security, and operations vacancies across ${selectedCountry}.`,
-        minAge: 18,
-        maxAge: 35,
-        education: "Bachelor's Degree or Senior High Diploma",
-        nationality: `Citizen or Permanent Resident of ${selectedCountry}`,
-        experience: "No experience required for entry grades",
-        physicalRequirements: "Standard vision and general health checks",
-        attemptsAllowed: "No limit within the age window",
-        categoryRelaxation: "Standard federal reservations apply",
-        officialUrl: "https://www.gov.uk"
-      };
-    }
-  }
-
   async function loadExams(selectedCountry: string) {
     setLoading(true);
-    
-    if (isMock) {
-      await loadMockExams(selectedCountry);
-      setLoading(false);
-      return;
-    }
-
+    setError(null);
     try {
       let response = await fetch(`/api/exams/${encodeURIComponent(selectedCountry)}`);
       if (!response.ok) throw new Error("Database fetch failed");
@@ -433,9 +330,8 @@ export default function Home() {
       }
       setExams(existing);
     } catch (err) {
-      console.warn("Backend API error or missing keys. Falling back to mock client-side mode:", err);
-      setIsMock(true);
-      await loadMockExams(selectedCountry);
+      console.error("Backend API error:", err);
+      setError("Failed to fetch examinations. Please check that GEMINI_API_KEY and Firebase are configured properly.");
     } finally {
       setLoading(false);
     }
@@ -444,18 +340,7 @@ export default function Home() {
   async function loadMore() {
     if (!country) return;
     setLoadingMore(true);
-    
-    if (isMock) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // Append a mock exam
-      setExams(prev => [
-        ...prev,
-        { id: `mock-extra-${Date.now()}`, name: `${country} Special Services Officer Exam`, detailsLoaded: false }
-      ]);
-      setLoadingMore(false);
-      return;
-    }
-
+    setError(null);
     try {
       const beforeNames = exams.map(e => e.name);
 
@@ -478,12 +363,8 @@ export default function Home() {
       }
       setExams(after);
     } catch (err) {
-      console.warn("Failed API loadMore, running in-memory mock add:", err);
-      setIsMock(true);
-      setExams(prev => [
-        ...prev,
-        { id: `mock-extra-${Date.now()}`, name: `${country} Special Operations Command`, detailsLoaded: false }
-      ]);
+      console.error("Failed API loadMore:", err);
+      setError("Failed to search and load more exams. Please check your API key configuration.");
     } finally {
       setLoadingMore(false);
     }
@@ -498,21 +379,7 @@ export default function Home() {
     }
 
     setExamLoading(true);
-
-    if (isMock) {
-      try {
-        const details = await loadMockExamDetails(exam.id, exam.name, country);
-        const updatedExam = { ...exam, ...details, detailsLoaded: true };
-        setSelectedExam(updatedExam);
-        setExams(prev => prev.map(e => e.id === exam.id ? updatedExam : e));
-      } catch (err) {
-        console.error("Mock load failed:", err);
-      } finally {
-        setExamLoading(false);
-      }
-      return;
-    }
-
+    setError(null);
     try {
       // Calling `/api/load-exam` instead of `/api/exam-details` to bypass the argument order bug in the original backend route handler
       const response = await fetch("/api/load-exam", {
@@ -534,12 +401,8 @@ export default function Home() {
       setSelectedExam(updatedExam);
       setExams(prev => prev.map(e => e.id === exam.id ? updatedExam : e));
     } catch (err) {
-      console.warn("API details failed, falling back to mock details:", err);
-      setIsMock(true);
-      const details = await loadMockExamDetails(exam.id, exam.name, country);
-      const updatedExam = { ...exam, ...details, detailsLoaded: true };
-      setSelectedExam(updatedExam);
-      setExams(prev => prev.map(e => e.id === exam.id ? updatedExam : e));
+      console.error("API details failed:", err);
+      setError("Failed to fetch detailed exam criteria. Make sure your Gemini API key is configured.");
     } finally {
       setExamLoading(false);
     }
@@ -560,90 +423,6 @@ export default function Home() {
 
     let mergedProfile = profile;
 
-    if (isMock) {
-      await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate thinking
-      
-      // Parse query locally to update profile
-      let extractedAge = profile.age;
-      let extractedEducation = profile.education;
-      let extractedNationality = profile.nationality;
-      let extractedInterests = profile.interests || [];
-
-      // Regex matching
-      const ageMatch = currentQuestion.match(/\b(1[89]|[2-5]\d)\b/);
-      if (ageMatch) extractedAge = Number(ageMatch[0]);
-
-      if (/degree|bachelor|graduate|college|bs|cs|engineering/i.test(currentQuestion)) {
-        if (/cs|computer science|it/i.test(currentQuestion)) {
-          extractedEducation = "BS in Computer Science";
-        } else {
-          extractedEducation = "Bachelor's Degree";
-        }
-      } else if (/high school|diploma|senior high/i.test(currentQuestion)) {
-        extractedEducation = "High School Diploma";
-      }
-
-      if (/india/i.test(currentQuestion)) {
-        extractedNationality = "India";
-      } else if (/us|united states|america/i.test(currentQuestion)) {
-        extractedNationality = "United States";
-      } else if (/uk|united kingdom|british/i.test(currentQuestion)) {
-        extractedNationality = "United Kingdom";
-      }
-
-      if (/code|coding|software|programming/i.test(currentQuestion)) {
-        if (!extractedInterests.includes("coding")) extractedInterests = [...extractedInterests, "coding"];
-      }
-      if (/management|admin|administrative/i.test(currentQuestion)) {
-        if (!extractedInterests.includes("administration")) extractedInterests = [...extractedInterests, "administration"];
-      }
-
-      const updatedProfile = {
-        ...profile,
-        age: extractedAge,
-        education: extractedEducation,
-        nationality: extractedNationality,
-        interests: extractedInterests
-      };
-
-      setProfile(updatedProfile);
-
-      // Generate response
-      let answerText = "";
-      if (extractedEducation === "BS in Computer Science") {
-        answerText = `### AI Guidance Analysis
-Based on your updated profile showing a **BS in Computer Science** at age **${extractedAge || 23}**, here is my advice:
-
-- **Technical Posts (SSC CGL)**: You are highly eligible for Inspector positions (e.g. Assistant Section Officer in MeitY or cyber-cell departments) which offer high salary packages starting at approx. ₹70,000/month.
-- **Railway Recruitment (RRB NTPC)**: Great opportunities for junior developer roles and senior section engineers.
-- **General Administration (UPSC Civil Services)**: Excellent long-term path. CS grads score very well in the analytical Aptitude tests (CSAT).
-
-#### Suggested Action Plan:
-1. Revise quantitative aptitude topics.
-2. Keep an eye out for SSC and UPSC notifications starting early next year.
-
-*I have synced these metrics to your profile card! Let me know if you would like me to compare salary structures or exam syllabus details.*`;
-      } else {
-        answerText = `### AI Guidance Analysis
-Hello! I noticed you are interested in career examination options. Based on a simulated profile (Age: **${extractedAge || 23}**, Education: **${extractedEducation || "Graduate"}**):
-
-- **Generalist Entry**: Examinations like **SSC CGL** or administrative state tests offer stability with low entry barriers for any major.
-- **Syllabus Prep**: Start preparing general knowledge, current events, and logical reasoning.
-
-*Please feel free to ask about salaries, exam patterns, or syllabus structures!*`;
-      }
-
-      setMessages(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          content: answerText
-        }
-      ]);
-      setChatLoading(false);
-      return;
-    }
-
     // 1. Extract Profile attributes
     try {
       const extract = await fetch("/api/extract-profile", {
@@ -654,9 +433,11 @@ Hello! I noticed you are interested in career examination options. Based on a si
           message: currentQuestion
         })
       });
-      const updates = await extract.json();
-      mergedProfile = { ...profile, ...updates };
-      setProfile(mergedProfile);
+      if (extract.ok) {
+        const updates = await extract.json();
+        mergedProfile = { ...profile, ...updates };
+        setProfile(mergedProfile);
+      }
     } catch (err) {
       console.error("Error extracting profile:", err);
     }
@@ -684,11 +465,14 @@ Hello! I noticed you are interested in career examination options. Based on a si
         }
       ]);
     } catch (error) {
-      console.warn("API chat failed, falling back to mock chat advisor:", error);
-      setIsMock(true);
-      // Run mock chat handler on the fly
-      setQuestion(currentQuestion);
-      askAI();
+      console.error("API chat failed:", error);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "⚠️ **Error:** Failed to connect to CareerCompass AI. Please ensure your `GEMINI_API_KEY` and Firebase configurations are correctly set up."
+        }
+      ]);
     } finally {
       setChatLoading(false);
     }
@@ -874,6 +658,11 @@ Hello! I noticed you are interested in career examination options. Based on a si
                     </button>
                   );
                 })
+              ) : error ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-rose-500/25 rounded-xl bg-rose-500/5">
+                  <AlertCircle className="w-10 h-10 text-rose-500 mb-2 animate-pulse" />
+                  <p className="text-sm text-rose-400 font-semibold">{error}</p>
+                </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-white/5 rounded-xl bg-neutral-900/10">
                   <Compass className="w-10 h-10 text-neutral-800 mb-2 animate-pulse-slow" />
