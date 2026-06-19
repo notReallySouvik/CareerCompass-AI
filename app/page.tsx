@@ -146,28 +146,42 @@ useEffect(() => {
 
   useEffect(()=>{
 
-    async function loadCountries(){
+async function loadCountries() {
 
-      const snapshot =
-        await getDocs(
-          collection(
-            db,
-            "countries"
-          )
-        );
+  let snapshot =
+    await getDocs(
+      collection(
+        db,
+        "countries"
+      )
+    );
 
+  if (snapshot.empty) {
 
-      const list =
-        snapshot.docs.map(
-          doc =>
-            doc.data().name
-        );
+    await fetch(
+      "/api/init-db",
+      {
+        method: "POST"
+      }
+    );
 
+    snapshot =
+      await getDocs(
+        collection(
+          db,
+          "countries"
+        )
+      );
+  }
 
-      setCountries(list);
-    }
+  const list =
+    snapshot.docs.map(
+      doc =>
+        doc.data().name
+    );
 
-
+  setCountries(list);
+}
     loadCountries();
 
   },[]);
