@@ -114,6 +114,6 @@ This project is licensed under the [MIT License](./LICENSE).
 
 ## 👤 Collaborators
 
-**notReallySouvik** — [GitHub](https://github.com/notReallySouvik)
-**curiousdolphinn** — [GitHub](https://github.com/curiousdolphinn)
-**ByteNinjaX07** — [GitHub](https://github.com/ByteNinjaX07)
+- **notReallySouvik** — [GitHub](https://github.com/notReallySouvik)
+- **curiousdolphinn** — [GitHub](https://github.com/curiousdolphinn)
+- **ByteNinjaX07** — [GitHub](https://github.com/ByteNinjaX07)
