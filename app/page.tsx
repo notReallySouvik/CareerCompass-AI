@@ -30,31 +30,7 @@ type Exam = {
 };
 
 function getAssistantCountry(country: string, profile: UserProfile, message: string) {
-  const currentMessage = message.toLowerCase();
-  const nationality = (profile.nationality || "").toLowerCase();
-
-  if (
-    currentMessage.includes("india") ||
-    currentMessage.includes("indian") ||
-    currentMessage.includes("west bengal") ||
-    currentMessage.includes("bits pilani")
-  ) {
-    return "India";
-  }
-
-  if (currentMessage.includes("indonesia") || currentMessage.includes("indonesian")) {
-    return "Indonesia";
-  }
-
-  if (nationality.includes("india") || nationality.includes("indian")) {
-    return "India";
-  }
-
-  if (nationality.includes("indonesia") || nationality.includes("indonesian")) {
-    return "Indonesia";
-  }
-
-  return country;
+  return profile.nationality ?? "";
 }
 
 export default function Home() {
@@ -509,7 +485,7 @@ export default function Home() {
           </section>
         </aside>
 
-        <section className="grid gap-5 xl:grid-rows-[1fr_320px]">
+        <section className="grid gap-5 xl:grid-rows-[1fr_550px]">
           <section className="min-h-[430px] rounded-2xl border border-white/5 bg-[#0b0f1a] p-6 shadow-[0_16px_45px_rgba(0,0,0,0.38)] backdrop-blur-xl">
             {detailsLoading ? (
               <div className="flex h-full min-h-[360px] items-center justify-center">
@@ -580,7 +556,7 @@ export default function Home() {
               )}
             </div>
 
-            <div className="grid h-[270px] gap-0 md:grid-cols-[1fr_360px]">
+            <div className="grid h-[500px] gap-0 md:grid-cols-[1fr_360px]">
               <div className="space-y-3 overflow-y-auto p-4">
                 {messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
@@ -676,13 +652,13 @@ export default function Home() {
                 <div ref={chatEndRef} />
               </div>
 
-              <div className="border-t border-white/5 p-4 md:border-l md:border-t-0">
-                <textarea
-                  value={question}
-                  onChange={event => setQuestion(event.target.value)}
-                  placeholder="Ask about government exams..."
-                  className="h-[164px] w-full resize-none rounded-xl border border-white/5 bg-black/35 p-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-300/50"
-                />
+<div className="flex h-full flex-col border-t border-white/5 p-4 md:border-l md:border-t-0">
+<textarea
+  value={question}
+  onChange={event => setQuestion(event.target.value)}
+  placeholder="Ask about government exams..."
+  className="flex-1 w-full resize-none rounded-xl border border-white/5 bg-black/35 p-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-300/50"
+/>
                 <button
                   onClick={askAI}
                   disabled={chatLoading || !question.trim()}
